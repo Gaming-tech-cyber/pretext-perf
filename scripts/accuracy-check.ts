@@ -105,7 +105,15 @@ async function startProxyServer(targetOrigin: string): Promise<{ baseUrl: string
   const port = await getAvailablePort()
   const server = createHttpServer(async (req, res) => {
     try {
-      const targetUrl = new URL(req.url ?? '/', targetOrigin)
+      const incomingUrl = new URL(req.url ?? '/', 'http://127.0.0.1')
+      if (!incomingUrl.pathname.startsWith('/accuracy')) {
+        res.statusCode = 400
+        res.setHeader('content-type', 'text/plain; charset=utf-8')
+        res.end('Invalid proxy path')
+        return
+      }
+      const safeRelativeUrl = `${incomingUrl.pathname}${incomingUrl.search}${incomingUrl.hash}`
+      const targetUrl = new URL(safeRelativeUrl, targetOrigin)
       const response = await fetch(targetUrl, { method: req.method ?? 'GET' })
       res.statusCode = response.status
       response.headers.forEach((value, key) => {
